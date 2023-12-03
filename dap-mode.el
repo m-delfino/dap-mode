@@ -951,7 +951,7 @@ PARAMS are the event params.")
                                                                               (plist-get :output-filter-function))))
                                                    (funcall output-filter-fn formatted-output)
                                                  formatted-output)))
-                  (when (or (not dap-output-buffer-filter) (member (gethash "category" body)
+                  (when (or (not dap-output-buffer-filter) (member (gethash "category" body "stdout")
                                                                    dap-output-buffer-filter))
                     (dap--print-to-output-buffer debug-session formatted-output))))
       ("breakpoint" (-when-let* (((breakpoint &as &hash "id") (when body
