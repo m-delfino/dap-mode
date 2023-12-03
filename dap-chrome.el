@@ -29,6 +29,7 @@
 
 (require 'dap-mode)
 (require 'dap-utils)
+(require 'dap-node)
 
 (defcustom dap-chrome-debug-path (expand-file-name "vscode/msjsdiag.debugger-for-chrome"
                                                    dap-utils-extension-path)
@@ -49,6 +50,7 @@
   "Populate CONF with the required arguments."
   (setq conf (-> conf
                  (plist-put :type "chrome")
+                 (plist-put :body-filter-function #'dap-node-body-filter-function)
                  (plist-put :dap-server-path dap-chrome-debug-program)
                  (dap--put-if-absent :cwd (expand-file-name default-directory))))
   (dap--plist-delete
