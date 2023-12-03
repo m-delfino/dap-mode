@@ -44,6 +44,8 @@
 
 (defun dap-node--populate-start-file-args (conf)
   "Populate CONF with the required arguments."
+  (if (plist-get conf :dap-server-path)
+      (plist-put conf :dap-server-path (cl-map 'list (lambda(x) x) (plist-get conf :dap-server-path))))
   (let ((conf (-> conf
                   (dap--put-if-absent :dap-server-path dap-node-debug-program)
                   (dap--put-if-absent :type "node")
