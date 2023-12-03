@@ -76,6 +76,8 @@ With prefix, FORCED to redownload the extension."
    (plist-put conf :host "localhost")
    (plist-put conf :type "lldb")
    (plist-put conf :cargo "")
+   (if (plist-get conf :relativePathBase)
+       (plist-put conf :local-to-remote-path-fn (lambda (x) (string-remove-prefix (concat (plist-get conf :relativePathBase) "/") x))))
    conf))
 
 (provide 'dap-codelldb)
