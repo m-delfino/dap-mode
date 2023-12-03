@@ -79,6 +79,7 @@ See also `dap-default-terminal-kind'."
 
 (defun dap-internal-terminal-shell (command title debug-session)
   (let ((buf (dap--make-terminal-buffer title debug-session)))
+    (add-to-list 'display-buffer-alist `(,(buffer-name buf) display-buffer-no-window (nil)))
     (async-shell-command command buf buf)))
 
 (defun dap-internal-terminal-auto (command title debug-session)
