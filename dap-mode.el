@@ -65,15 +65,6 @@ See also `dap-default-terminal-kind'."
   :group 'dap-mode
   :type '(repeat string))
 
-(defun dap--make-terminal-buffer (title debug-session)
-  "Generate an internal terminal buffer.
-The name is derived from TITLE and DEBUG-SESSION. This function
-should be used in `dap-internal-terminal-*'."
-  (generate-new-buffer
-   (format "*%s %s*"
-           (dap--debug-session-name debug-session)
-           (if title (concat "- " title) "console"))))
-
 (declare-function vterm-mode "ext:vterm" (&optional arg))
 (defvar vterm-shell)
 (defvar vterm-kill-buffer-on-exit)
@@ -271,6 +262,7 @@ request on hitting a breakpoint. 0 means to return all frames."
   ;; DAP parser.
   (parser (make-dap--parser) :read-only t)
   (output-buffer nil)
+  (terminal-buffer nil)
   (thread-id nil)
   ;; reference to the workspace that holds the information about the lsp workspace.
   (workspace nil)
@@ -299,6 +291,20 @@ request on hitting a breakpoint. 0 means to return all frames."
   (metadata (make-hash-table :test 'eql))
   ;; when t the output already has been displayed for this buffer.
   (output-displayed))
+
+(defun dap--make-terminal-buffer (title debug-session)
+  "Generate an internal terminal buffer.
+The name is derived from TITLE and DEBUG-SESSION. This function
+should be used in `dap-internal-terminal-*'."
+  (-let* ((name (format "*%s %s*"
+           (dap--debug-session-name debug-session)
+           (if title (concat "- " title) "console")))
+           (buffer (generate-new-buffer name)))
+
+    (setf (dap--debug-session-terminal-buffer debug-session) buffer)
+
+    buffer))
+
 
 (cl-defstruct dap--parser
   (waiting-for-response nil)
@@ -1948,8 +1954,8 @@ normally with `dap-debug'"
   "Go to output buffer."
   (interactive)
   (let ((win (display-buffer-in-side-window
-              (dap--debug-session-output-buffer (dap--cur-session-or-die))
-              `((side . bottom) (slot . 5) (window-width . 0.20)))))
+              (or (dap--debug-session-terminal-buffer (dap--cur-session-or-die)) (dap--debug-session-output-buffer (dap--cur-session-or-die)))
+              `((side . bottom) (slot . 5) (window-width . 0.5)))))
     (set-window-dedicated-p win t)
     (unless no-select (select-window win))
     (fit-window-to-buffer win dap-output-window-max-height dap-output-window-min-height)))
