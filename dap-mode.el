@@ -1070,6 +1070,7 @@ terminal configured (probably xterm)."
      ;; (file error).
      (when (or (string= kind "integrated") (string= kind "external"))
        (funcall dap-internal-terminal command-to-run title debug-session)
+       (dap-go-to-output-buffer)
        ;; NOTE: we don't know the PID of the shell that ran the process and we
        ;; don't know the PID of the started process.
        (dap--send-message (dap--make-success-response seq "runInTerminal")
