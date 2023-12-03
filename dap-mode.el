@@ -946,7 +946,12 @@ PARAMS are the event params.")
   "Dispatch EVENT for DEBUG-SESSION."
   (-let [(&hash "body" "event" event-type) event]
     (pcase event-type
-      ("output" (-when-let* ((formatted-output (dap--output-buffer-format body))
+      ("output" (-when-let* ((body (if-let ((body-filter-fn (-> debug-session
+                                                                (dap--debug-session-launch-args)
+                                                                (plist-get :body-filter-function))))
+                                       (funcall body-filter-fn body)
+                                     body))
+                             (formatted-output (dap--output-buffer-format body))
                              (formatted-output (if-let ((output-filter-fn (-> debug-session
                                                                               (dap--debug-session-launch-args)
                                                                               (plist-get :output-filter-function))))
