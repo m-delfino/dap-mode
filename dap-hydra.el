@@ -31,7 +31,7 @@
 (require 'dap-mode)
 (require 'dap-ui)
 
-(defhydra dap-hydra (:color pink :hint nil :foreign-keys run)
+(defhydra dap-hydra (:color pink :hint nil :foreign-keys run :exit t)
   "
 ^Stepping^          ^Switch^                 ^Breakpoints^         ^Debug^                     ^Eval
 ^^^^^^^^----------------------------------------------------------------------------------------------------------------
