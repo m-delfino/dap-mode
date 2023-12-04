@@ -42,6 +42,24 @@
 (dap-utils-openvsx-setup-function "dap-node" "ms-vscode" "node-debug2"
                                   dap-node-debug-path)
 
+(defun dap-node-variable-tooltip(button result variables-reference)
+  (setq dap--tooltip-overlay
+        (-doto (make-overlay (button-start button) (button-end button))
+          (overlay-put 'mouse-face 'dap-mouse-eval-thing-face)))
+  ;; Show a dead buffer so that the `posframe' size is consistent.
+  (when (get-buffer dap-mouse-buffer)
+    (kill-buffer dap-mouse-buffer))
+  (unless (and (zerop variables-reference) (string-empty-p result))
+    (apply #'posframe-show dap-mouse-buffer
+           :position (button-start button)
+           :accept-focus t
+           dap-mouse-posframe-properties)
+    (with-current-buffer (get-buffer-create dap-mouse-buffer)
+      (dap-ui-render-value (dap--cur-session) result
+                           result variables-reference))
+    (run-with-timer .1 nil (lambda()
+                         (add-hook 'post-command-hook 'dap-tooltip-post-tooltip)))))
+
 (defun dap-node-body-filter-function (body)
   "Process terminal output from BODY."
   (-when-let* (((&hash "output" "variablesReference") body)
@@ -53,7 +71,12 @@
                            :variablesReference  variablesReference)))
                (variables (gethash "variables" response))
                (output (mapconcat
-                            (lambda(x) (gethash "value" x))
+                            (lambda(x)
+                              (-let (((&hash "value" "variablesReference") x))
+                                (if (> variablesReference 0)
+                                    (buttonize value (lambda (button)
+                                                       (dap-node-variable-tooltip button value variablesReference)))
+                                  value)))
                             variables
                             " ")))
     (puthash "output" (concat output "\n") body))
