@@ -949,7 +949,7 @@ PARAMS are the event params.")
       ("output" (-when-let* ((body (if-let ((body-filter-fn (-> debug-session
                                                                 (dap--debug-session-launch-args)
                                                                 (plist-get :body-filter-function))))
-                                       (funcall body-filter-fn body)
+                                       (funcall body-filter-fn debug-session body)
                                      body))
                              (formatted-output (dap--output-buffer-format body))
                              (formatted-output (if-let ((output-filter-fn (-> debug-session
