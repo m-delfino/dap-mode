@@ -1978,7 +1978,7 @@ If the current session it will be terminated."
                             (dap--set-sessions))
                        (when (eq (dap--cur-session) debug-session)
                          (dap--switch-to-session nil))
-                       (when output-buffer (kill-buffer buffer))
+                       (when output-buffer (kill-buffer output-buffer))
                        (when-let (buffer (dap--debug-session-output-buffer debug-session))
                          (kill-buffer buffer))
                        (when-let (buffer (get-buffer (concat "*" (dap--debug-session-name debug-session) " stderr*")))
