@@ -1253,8 +1253,11 @@ ADAPTER-ID the id of the adapter."
                           :launch-args launch-args
                           :proc proc
                           :name session-name
-                          :local-to-remote-path-fn (or local-to-remote-path-fn (-partial #'dap--local-to-remote-path-1 nil))
-                          :remote-to-local-path-fn (or remote-to-local-path-fn (-partial #'dap--remote-to-local-path-identical nil))
+                          :workspace (lsp-workspace-root)
+                          :local-to-remote-path-fn (or local-to-remote-path-fn
+                                                       (-partial #'dap--local-to-remote-path-1 nil))
+                          :remote-to-local-path-fn (or remote-to-local-path-fn
+                                                       (-partial #'dap--remote-to-local-path-identical nil))
                           :output-buffer (dap--create-output-buffer session-name))))
     (set-process-sentinel proc
                           (lambda (_process exit-str)
