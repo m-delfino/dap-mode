@@ -42,7 +42,7 @@
 (dap-utils-openvsx-setup-function "dap-node" "ms-vscode" "node-debug2"
                                   dap-node-debug-path)
 
-(defun dap-node-variable-tooltip(button result variables-reference)
+(defun dap-node-variable-tooltip(debug-session button result variables-reference)
   (setq dap--tooltip-overlay
         (-doto (make-overlay (button-start button) (button-end button))
           (overlay-put 'mouse-face 'dap-mouse-eval-thing-face)))
@@ -55,18 +55,18 @@
            :accept-focus t
            dap-mouse-posframe-properties)
     (with-current-buffer (get-buffer-create dap-mouse-buffer)
-      (dap-ui-render-value (dap--cur-session) result
+      (dap-ui-render-value debug-session result
                            result variables-reference))
     (run-with-timer .1 nil (lambda()
                          (add-hook 'post-command-hook 'dap-tooltip-post-tooltip)))))
 
-(defun dap-node-body-filter-function (body)
+(defun dap-node-body-filter-function (debug-session body)
   "Process terminal output from BODY."
   (-when-let* (((&hash "output" "variablesReference") body)
                (response (and
                           (string= output "output")
                           (dap-request
-                           (dap--cur-session)
+                           debug-session
                            "variables"
                            :variablesReference  variablesReference)))
                (variables (gethash "variables" response))
@@ -75,7 +75,7 @@
                               (-let (((&hash "value" "variablesReference") x))
                                 (if (> variablesReference 0)
                                     (buttonize value (lambda (button)
-                                                       (dap-node-variable-tooltip button value variablesReference)))
+                                                       (dap-node-variable-tooltip debug-session button value variablesReference)))
                                   value)))
                             variables
                             " ")))
