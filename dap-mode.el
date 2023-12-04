@@ -1260,6 +1260,7 @@ ADAPTER-ID the id of the adapter."
                           :launch-args launch-args
                           :proc proc
                           :name session-name
+                          :workspace (lsp-workspace-root)
                           :local-to-remote-path-fn (or local-to-remote-path-fn
                                                        (-partial #'dap--local-to-remote-path-1 nil))
                           :remote-to-local-path-fn (or remote-to-local-path-fn
