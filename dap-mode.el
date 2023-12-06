@@ -265,6 +265,8 @@ request on hitting a breakpoint. 0 means to return all frames."
   (output-buffer nil)
   (terminal-buffer nil)
   (thread-id nil)
+  ;; session parent for subprocesses
+  (parent nil)
   ;; reference to the workspace that holds the information about the lsp workspace.
   (workspace nil)
   (threads nil)
