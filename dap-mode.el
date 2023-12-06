@@ -375,8 +375,7 @@ has succeeded."
 (defun dap--session-running (debug-session)
   "Check whether DEBUG-SESSION still running."
   (and debug-session
-       (not (memq (dap--debug-session-state debug-session)
-                  '(terminated failed)))))
+       (not (memq (dap--debug-session-state debug-session) '(terminated failed)))))
 
 (defun dap--cur-active-session-or-die ()
   "Get currently non-terminated  `dap--debug-session' or die."
@@ -1092,22 +1091,6 @@ terminal configured (probably xterm)."
                          (format "unknown terminal kind %s" kind))
                         (dap--resp-handler) debug-session))))
 
-(lsp-defun dap--start-debugging ((debug-session &as &dap-session 'launch-args 'proc 'name)
-                                 (&hash "seq" "arguments" (&hash "configuration" "request")))
-
-  (-let* (((&plist :debugServer port :host) launch-args)
-          (new-launch-args (list
-                            :host host
-                            :debugServer port
-                            :request request
-                            :name (format "Child of %s" name))))
-    (ht-aeach (plist-put new-launch-args (intern (concat ":" key)) value) configuration)
-    (dap-start-debugging-noexpand new-launch-args)
-
-    (dap--send-message (dap--make-success-response
-                        seq "startDebugging")
-                       (dap--resp-handler) debug-session)))
-
 (defun dap--create-filter-function (debug-session)
   "Create filter function for DEBUG-SESSION."
   (let ((parser (dap--debug-session-parser debug-session))
@@ -1230,8 +1213,7 @@ ADAPTER-ID the id of the adapter."
 
     (cond
      ((eq result :finished) nil)
-     ((and (ht? result) (not (gethash "success" result)))
-      (error (gethash "message" result)))
+     ((and (ht? result) (not (gethash "success" result))) (error (gethash "message" result)))
      (t (gethash "body" result)))))
 
 (defun dap--open-network-stream (session-name host port)
@@ -1265,26 +1247,22 @@ ADAPTER-ID the id of the adapter."
             :local-to-remote-path-fn local-to-remote-path-fn
             :remote-to-local-path-fn remote-to-local-path-fn)
            launch-args)
-          (proc (cond
-                 (dap-server-path (make-process
-                                   :name session-name
-                                   :connection-type 'pipe
-                                   :coding 'no-conversion
-                                   :command dap-server-path
-                                   :stderr (concat "*" session-name " stderr*")
-                                   :noquery t))
-                 (t (dap--open-network-stream session-name (or host "localhost")
-                                              (or port
-                                                  (user-error ":debugServer or :dap-server-path should be present"))))))
+          (proc (if dap-server-path
+                    (make-process
+                     :name session-name
+                     :connection-type 'pipe
+                     :coding 'no-conversion
+                     :command dap-server-path
+                     :stderr (concat "*" session-name " stderr*")
+                     :noquery t)
+                  (dap--open-network-stream session-name host port)))
           (debug-session (make-dap--debug-session
                           :launch-args launch-args
                           :proc proc
                           :name session-name
                           :workspace (lsp-workspace-root)
-                          :local-to-remote-path-fn (or local-to-remote-path-fn
-                                                       (-partial #'dap--local-to-remote-path-1 nil))
-                          :remote-to-local-path-fn (or remote-to-local-path-fn
-                                                       (-partial #'dap--remote-to-local-path-identical nil))
+                          :local-to-remote-path-fn (or local-to-remote-path-fn (-partial #'dap--local-to-remote-path-1 nil))
+                          :remote-to-local-path-fn (or remote-to-local-path-fn (-partial #'dap--remote-to-local-path-identical nil))
                           :output-buffer (dap--create-output-buffer session-name))))
     (set-process-sentinel proc
                           (lambda (_process exit-str)
@@ -1467,7 +1445,7 @@ A negative value will move down frames."
     (error "Unable to find active session, thread, or frame.")))
 
 (defun dap-down-stack-frame (frames)
-  "Switch stackframe down FRAMES frames on the current thread.
+    "Switch stackframe down FRAMES frames on the current thread.
 A negative value will move up frames."
   (interactive "p")
   (dap-up-stack-frame (- frames)))
@@ -1754,24 +1732,6 @@ CONF's variables are expanded before being passed to
   (dap-start-debugging-noexpand
    (dap-variables-expand-in-launch-configuration conf)))
 
-(defun dap--cleanup-arguments (translated-launch-args)
-  (-> translated-launch-args
-      (cl-copy-list)
-      (dap--plist-delete :dap-compilation)
-      (dap--plist-delete :dap-compilation-dir)
-      (dap--plist-delete :cleanup-function)
-      (dap--plist-delete :startup-function)
-      (dap--plist-delete :dap-server-path)
-      (dap--plist-delete :environment-variables)
-      (dap--plist-delete :wait-for-port)
-      (dap--plist-delete :skip-debug-session)
-      (dap--plist-delete :program-to-start)
-      (dap--plist-delete :path-mappings)
-      (dap--plist-delete :local-to-remote-path-fn)
-      (dap--plist-delete :remote-to-local-path-fn)
-      (dap--plist-delete :debugServer)
-      (dap--plist-delete :host)))
-
 (defun dap-start-debugging-noexpand (launch-args)
   "Start debug session with LAUNCH-ARGS.
 Special arguments:
@@ -1781,13 +1741,9 @@ should be started after the :port argument is taken.
 
 :program-to-start - when set it will be started using `compilation-start'
 before starting the debug process."
-  (-let* (((&plist :name :skip-debug-session :cwd
-                   :program-to-start
+  (-let* (((&plist :name :skip-debug-session :cwd :program-to-start
                    :wait-for-port :type :request :port
-                   :startup-function
-                   :environment-variables
-                   :program
-                   :hostName host) launch-args)
+                   :startup-function :environment-variables :program :hostName host) launch-args)
           (session-name (dap--calculate-unique-name name (dap--get-sessions)))
           (default-directory (or cwd default-directory))
           (process-environment (if environment-variables
@@ -1800,9 +1756,8 @@ before starting the debug process."
     (when program-to-start
       (setf program-process
             (get-buffer-process
-             (compilation-start
-              program-to-start 'dap-server-log-mode
-              (lambda (_) (format " * %s log*" session-name))))))
+             (compilation-start program-to-start 'dap-server-log-mode
+                                (lambda (_) (concat "*" session-name " server log*"))))))
     (when wait-for-port
       (dap--wait-for-port host port dap-connect-retry-count dap-connect-retry-interval))
 
@@ -1822,16 +1777,23 @@ before starting the debug process."
 
               (dap--set-sessions (cons debug-session debug-sessions)))
             (let ((translated-launch-args (cl-copy-list launch-args)))
-              (when cwd
-                (plist-put translated-launch-args :cwd
-                           (funcall (dap--debug-session-local-to-remote-path-fn debug-session)
-                                    cwd)))
-              (when program
-                (plist-put translated-launch-args :program
-                           (funcall (dap--debug-session-local-to-remote-path-fn debug-session)
-                                    program)))
+              (when cwd (plist-put translated-launch-args :cwd (funcall (dap--debug-session-local-to-remote-path-fn debug-session) cwd)))
+              (when program (plist-put translated-launch-args :program (funcall (dap--debug-session-local-to-remote-path-fn debug-session) program)))
               (dap--send-message
-               (dap--make-request request (dap--cleanup-arguments translated-launch-args))
+               (dap--make-request request (-> translated-launch-args
+                                              (cl-copy-list)
+                                              (dap--plist-delete :dap-compilation)
+                                              (dap--plist-delete :dap-compilation-dir)
+                                              (dap--plist-delete :cleanup-function)
+                                              (dap--plist-delete :startup-function)
+                                              (dap--plist-delete :dap-server-path)
+                                              (dap--plist-delete :environment-variables)
+                                              (dap--plist-delete :wait-for-port)
+                                              (dap--plist-delete :skip-debug-session)
+                                              (dap--plist-delete :program-to-start)
+                                              (dap--plist-delete :path-mappings)
+                                              (dap--plist-delete :local-to-remote-path-fn)
+                                              (dap--plist-delete :remote-to-local-path-fn)))
                (dap--session-init-resp-handler debug-session)
                debug-session))))
          debug-session)
@@ -1861,18 +1823,18 @@ If all succeed, then run CB."
         (compilation-start command t (lambda (&rest _) (format "*DAP compilation:%s*" name)))
       (let (window)
         (cl-labels ((cf (buf status &rest _)
-                      (with-current-buffer buf
-                        (remove-hook 'compilation-finish-functions #'cf t)
-                        (if (string= "finished\n" status)
-                            (progn
-                              (when (and (not dap-debug-compilation-keep)
-                                         (window-live-p window)
-                                         (eq buf (window-buffer window)))
-                                (delete-window window))
-                              (if (length= tasks 0)
-                                  (funcall cb)
-                                (dap-debug-run-task (cdr tasks) cb)))
-                          (lsp--error "Compilation step failed")))))
+                        (with-current-buffer buf
+                          (remove-hook 'compilation-finish-functions #'cf t)
+                          (if (string= "finished\n" status)
+                              (progn
+                                (when (and (not dap-debug-compilation-keep)
+                                           (window-live-p window)
+                                           (eq buf (window-buffer window)))
+                                  (delete-window window))
+                                (if (length= tasks 0)
+                                    (funcall cb)
+                                  (dap-debug-run-task (cdr tasks) cb)))
+                            (lsp--error "Compilation step failed")))))
           (add-hook 'compilation-finish-functions #'cf nil t)
           (setq window (display-buffer (current-buffer))))))))
 
@@ -1913,8 +1875,8 @@ be used to compile the project, spin up docker, ...."
         (dap-debug-run-task `(:cwd ,(or (plist-get launch-args :dap-compilation-dir)
                                         (lsp-workspace-root)
                                         default-directory)
-                                   :command ,dap-compilation
-                                   :label ,(truncate-string-to-width dap-compilation 20)) cb)
+                              :command ,dap-compilation
+                              :label ,(truncate-string-to-width dap-compilation 20)) cb)
       (-if-let ((&plist :preLaunchTask) launch-args)
           (let* ((task (dap-tasks-get-configuration-by-label preLaunchTask))
                  (tasks (dap-tasks-configuration-get-depends task)))
@@ -1982,7 +1944,7 @@ normally with `dap-debug'"
     (unless no-select (select-window win))
     (fit-window-to-buffer win dap-output-window-max-height dap-output-window-min-height)))
 
-(lsp-defun dap-delete-session ((debug-session &as &dap-session 'output-buffer 'program-proc))
+(defun dap-delete-session (debug-session)
   "Remove DEBUG-SESSION.
 If the current session it will be terminated."
   (interactive (list (dap--cur-session-or-die)))
@@ -1992,7 +1954,8 @@ If the current session it will be terminated."
                             (dap--set-sessions))
                        (when (eq (dap--cur-session) debug-session)
                          (dap--switch-to-session nil))
-                       (when output-buffer (kill-buffer output-buffer))
+                       (when-let (buffer (dap--debug-session-output-buffer debug-session))
+                         (kill-buffer buffer))
                        (when-let (buffer (dap--debug-session-output-buffer debug-session))
                          (kill-buffer buffer))
                        (when-let (buffer (get-buffer (concat "*" (dap--debug-session-name debug-session) " stderr*")))
@@ -2002,11 +1965,27 @@ If the current session it will be terminated."
                        (dap--refresh-breakpoints))))
     (if (not (dap--session-running debug-session))
         (funcall cleanup-fn)
-      (dap-request debug-session "disconnect" :restart :json-false)
-      (lambda (_resp)
-        (when (and program-proc (process-live-p program-proc))
-          (kill-process program-proc))
-        (funcall cleanup-fn)))))
+      (dap--send-message (dap--make-request "disconnect"
+                                            (list :restart :json-false))
+                         (dap--resp-handler
+                          (lambda (_resp)
+                            ;; its still alive, so kill its debugger off,
+                            ;; causing the process sentinel from
+                            ;; `dap--create-session' to do its thing. NOTE that
+                            ;; this need not be done if the process isn't alive
+                            ;; (case above), so this was moved here, as a minor
+                            ;; optimization.
+                            (when-let (proc (dap--debug-session-program-proc debug-session))
+                              ;; ensure that `dap-terminated-hook' runs; must be
+                              ;; done before CLEANUP-FN, as otherwise the
+                              ;; process' buffer will be killed before it,
+                              ;; potentially causing weirdness.
+                              (when (process-live-p proc)
+                                ;; The server might have already died due to the
+                                ;; disconnect.
+                                (kill-process proc)))
+                            (funcall cleanup-fn)))
+                         debug-session))))
 
 (defun dap-delete-all-sessions ()
   "Terminate/remove all sessions."
@@ -2090,9 +2069,9 @@ point is set."
 (defvar dap-mode-map
   (let ((dap-mode-map (make-sparse-keymap)))
     (define-key dap-mode-map [left-margin mouse-1]
-                'dap-mode-mouse-set-clear-breakpoint)
+      'dap-mode-mouse-set-clear-breakpoint)
     (define-key dap-mode-map [left-fringe mouse-1]
-                'dap-mode-mouse-set-clear-breakpoint)
+      'dap-mode-mouse-set-clear-breakpoint)
     dap-mode-map)
   "Keymap for `dap-mode'.")
 
